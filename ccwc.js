@@ -1,68 +1,109 @@
 const fs = require("fs");
-const yargs = require("yargs")
+const yargs = require("yargs");
+const readline = require("readline");
 //npm install yargs --save
 
-function ccwc(filename){
 
-    fs.readFile(filename, "utf8", (err, data) => {
-        if (err) {
-          console.log(filename + " could not be opened");
-          return;
-        }
+function output(filename, c, l, w, numBytes, numLines, numWords)
+{
+    let str = "";
 
-        //both ways work
-        //const numBytes = Buffer.byteLength(data, "utf8")
-        const numBytes = new TextEncoder().encode(data).length
+    if(c) str += numBytes + " ";
+    if(l) str += numLines + " ";
+    if(w) str += numWords + " ";
 
-        //data is readFile's cb's parameter, it is a string
-        const lines = data.split("\r\n")
-        let counter = 0
-        //remove "lines" at the end that only consist of the empty string (as opposed to \n)
-        for(let i = lines.length - 1; i >=0; i--)
+    if(filename) output += filename;
+
+    return str;
+}
+async function ccwc(filename, c, l, w){
+
+    const all = (c && l && w) || (!c && !l && !w);
+    c = c || all;
+    l = l || all;
+    w = w || all;
+
+    let numBytes = 0;
+    let numLines = 0;
+    let numWords = 0;
+
+    if(filename)
+    {
+        fs.readFile(filename, "utf8", (err, data) => {
+            if (err) {
+              console.log(filename + " could not be opened");
+              return;
+            }
+
+            //both ways work
+            //numBytes = Buffer.byteLength(data, "utf8")
+            numBytes = new TextEncoder().encode(data).length
+
+            if(c && !l && !w)
+            {
+                //only need the byte count, don't process every line
+                console.log(numBytes + " " + filename);
+                return;
+            }
+
+            const lines = data.split("\r\n")
+            let counter = 0
+
+            //remove "lines" at the end that only consist of the empty string (as opposed to \n)
+            for(let i = lines.length - 1; i >=0; i--)
+            {
+                if(lines[i] !== "")  break;
+                counter += 1
+            }
+
+            numLines = lines.length;
+            //numLines = lines.length - counter;
+            for(let i = 0; i<lines.length; i++)
+            {
+                //don't let empty strings contribute to the word count
+                numWords += lines[i].split(" ").filter(ele => ele !== "").length
+            }
+
+            console.log(output(filename, c, l, w, numBytes, numLines, numWords));
+        });
+    }
+    else    //via stdin from the terminal
+    {
+       //alternative that doesn't quite work
+       //process.stdin.fd is equal to 0
+       //const data = fs.readFileSync(process.stdin.fd).toString();
+
+        const rl = readline.createInterface({ input: process.stdin });
+        for await(const line of rl)
         {
-            if(lines[i] !== "")  break;
-            counter += 1
-        }
-        const numLines = lines.length - counter;
-
-        let numWords = 0
-        for(let i = 0; i<lines.length; i++)
-        {
-            //don't let empty strings contribute to the word count
-            const words = lines[i].split(" ").filter(ele => ele !== "")
-            numWords += words.length
-            //if(words.length == 1) console.log(words)
+            //numBytes += new TextEncoder().encode(line).length
+            numBytes += Buffer.byteLength(line, "utf8")
+            numLines += 1;
+            numWords += line.split(" ").filter(ele => ele !== "").length
         }
 
-        console.log(numBytes," bytes")
-        console.log(numLines, " lines");
-        console.log(numWords, " words");
-        console.log(counter, " counter")
-    });
+        console.log(output(filename, c, l, w, numBytes, numLines, numWords ));
+    }
 }
 
+const args = yargs.argv
+//console.log(args["$0"])     //the js file that is being run
+
+//args["_"] is an array of positional arguments
+const filename = args["_"][0]
+
+ccwc(filename, args.c, args.l, args.w)
+
+//place the positional arguments in the front so they aren't mistaken for the value of a flag
+//e.g node ccwc.js -a test.txt  (the value of the flag a is test.txt)
+
+
 /*
-//using process.argv
+//alternative to yargs
+//use process.argv
 
 console.log(process.argv[0])            //path to node
 console.log(process.argv[1])            //path to this js file
 const args = process.argv.slice(2)
 const filename = args[0]
-
 */
-
-const args = yargs.argv
-
-//console.log(args["$0"])     //the js file that is being run
-
-//args["_"] is an array of positional arguments (go at the front)
-//otherwise can be interpreted as the value of a flag
-
-const filename = args["_"][0]
-
-//if you try to access a flag that was not provided on the command line, undefined
-const c = args.c ? args.c : false
-const l = args.l ? args.l : false
-const w = args.w ? args.w : false
-
-ccwc(filename)

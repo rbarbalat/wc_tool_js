@@ -29,6 +29,9 @@ async function ccwc(filename, c, l, w){
 
     if(filename)
     {
+        //need a try/catch block for error handling with readFileSync, d.n take a callback
+        //const data = fs.readFileSync(filename, { encoding: 'utf8', flag: 'r' } );
+
         fs.readFile(filename, "utf8", (err, data) => {
             if (err) {
               console.log(filename + " could not be opened");
@@ -47,21 +50,23 @@ async function ccwc(filename, c, l, w){
             }
 
             const lines = data.split("\r\n")
-            let counter = 0
+            numLines = lines.length;
 
             //remove "lines" at the end that only consist of the empty string (as opposed to \n)
-            for(let i = lines.length - 1; i >=0; i--)
-            {
-                if(lines[i] !== "")  break;
-                counter += 1
-            }
-
-            numLines = lines.length;
+            //let counter = 0
+            // for(let i = lines.length - 1; i >=0; i--)
+            // {
+            //     if(lines[i] !== "")  break;
+            //     counter += 1
+            // }
             //numLines = lines.length - counter;
+
             for(let i = 0; i<lines.length; i++)
             {
                 //don't let empty strings contribute to the word count
-                numWords += lines[i].split(" ").filter(ele => ele !== "").length
+                const words = lines[i].split(" ").filter(ele => ele !== "")
+                numWords += words.length
+                if(words.length == 1) console.log(lines[i])
             }
 
             console.log(output(filename, c, l, w, numBytes, numLines, numWords));
@@ -69,9 +74,9 @@ async function ccwc(filename, c, l, w){
     }
     else    //via stdin from the terminal
     {
-       //alternative that doesn't quite work
-       //process.stdin.fd is equal to 0
-       //const data = fs.readFileSync(process.stdin.fd).toString();
+
+        //alternative, 0 refers to process.stdin
+        //const data = fs.readFileSync(0).toString();
 
         const rl = readline.createInterface({ input: process.stdin });
         for await(const line of rl)
@@ -87,12 +92,18 @@ async function ccwc(filename, c, l, w){
 }
 
 const args = yargs.argv
-//console.log(args["$0"])     //the js file that is being run
-
-//args["_"] is an array of positional arguments
 const filename = args["_"][0]
+const pipe = !process.stdin.isTTY;
 
-ccwc(filename, args.c, args.l, args.w)
+if((filename && !pipe) || (!filename && pipe))
+ccwc(filename, args.c, args.l, args.w);
+else
+console.log("Please provide a filename as a positional argument or pipe in a file but not both")
+
+
+//yargs.argv["$0"]     //the js file that is being run
+//yargs.argv["_"] is an array of positional arguments
+
 
 //place the positional arguments in the front so they aren't mistaken for the value of a flag
 //e.g node ccwc.js -a test.txt  (the value of the flag a is test.txt)

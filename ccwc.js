@@ -99,22 +99,3 @@ if((filename && !pipe) || (!filename && pipe))
 ccwc(filename, args.c, args.l, args.w);
 else
 console.log("Please provide a filename as a positional argument or pipe in a file but not both")
-
-
-//yargs.argv["$0"]     //the js file that is being run
-//yargs.argv["_"] is an array of positional arguments
-
-
-//place the positional arguments in the front so they aren't mistaken for the value of a flag
-//e.g node ccwc.js -a test.txt  (the value of the flag a is test.txt)
-
-
-/*
-//alternative to yargs
-//use process.argv
-
-console.log(process.argv[0])            //path to node
-console.log(process.argv[1])            //path to this js file
-const args = process.argv.slice(2)
-const filename = args[0]
-*/
